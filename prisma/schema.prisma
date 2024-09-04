@@ -36,7 +36,4 @@ model Companion {
 
   category   Category @relation(fields: [categoryId], references: [id])
   categoryId String   @db.ObjectId
-
-  @@index([categoryId])
-  @@fulltext([name])
 }
