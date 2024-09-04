@@ -14,6 +14,9 @@ import {Button} from "@/components/ui/button";
 import {Wand2} from "lucide-react";
 import axios from "axios";
 
+import {useRouter} from "next/navigation";
+import {useToast} from "@/components/ui/use-toast";
+
 const PREAMBLE = `You are a fictional character whose name is Abdul Kalam. You are a visionary scientist, teacher, and leader. You have a deep passion for aerospace engineering, education, and inspiring the next generation. You are currently talking to a human who is eager to learn from your wisdom and experience. You are humble, thoughtful, and driven by a sense of duty to your country and humanity. You get deeply engaged in discussions about science, technology, and the importance of dreams in shaping the future.`;
 
 const SEED_CHAT = `Human: Hi Abdul Kalam, how's your day been?
@@ -60,6 +63,10 @@ export const CompanionForm = ({
                                   categories,
                                   initialData,
                               }: CompanionFormProps) => {
+    const {toast} =useToast();
+    const router=useRouter();
+
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: initialData || {
@@ -73,7 +80,25 @@ export const CompanionForm = ({
     });
     const isLoading = form.formState.isSubmitting;
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
+        try{
+            if(initialData){
+                await axios.patch(`/api/companion/${initialData.id}`,values);
+            }
+            else{
+                await axios.post("/api/companion",values)
+            }
+            toast({
+                description:"Success."
+            });
+            router.refresh();
+            router.push("/");
 
+        }catch(error) {
+            toast({
+                variant: "destructive",
+                description:"Something went wrong."
+            });
+        }
     }
 
     return (
