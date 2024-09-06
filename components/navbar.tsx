@@ -27,12 +27,9 @@ export const Navbar=()=>{
 
             </div>
             <div className="flex items-center gap-x-3">
-                <Button variant="premium" size="sm">
-                    Upgrade
-                    <Sparkles className="h-4 w-4 fill-white text-white ml-2"></Sparkles>
-                </Button>
+
                 <ModeToggle/>
-                <UserButton></UserButton>
+                <UserButton afterSignOutUrl="/"></UserButton>
             </div>
         </div>
 

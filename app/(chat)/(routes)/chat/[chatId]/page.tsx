@@ -1,4 +1,4 @@
-import {auth, redirectToSignIn} from "@clerk/nextjs/server";
+import {auth} from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prismadb from "@/lib/prismadb";
 import React from "react";
@@ -14,7 +14,7 @@ interface ChatIdPageProps {
 const ChatIdPage = async ({ params }: ChatIdPageProps) => {
     const { userId } = auth();
     if (!userId) {
-        return redirectToSignIn();
+        return NextResponse.redirect("/sign-in");
     }
 
     const companion = await prismadb.companion.findUnique({
