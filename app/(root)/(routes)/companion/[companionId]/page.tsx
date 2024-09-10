@@ -1,6 +1,5 @@
 import prismadb from "@/lib/prismadb";
 import {CompanionForm} from "./components/companion-form";
-import {ObjectId} from "mongodb";
 import {auth, redirectToSignIn} from "@clerk/nextjs/server";
 import {NextResponse} from "next/server";
 

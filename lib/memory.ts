@@ -1,8 +1,7 @@
 import { Redis } from "@upstash/redis";
-import { OpenAIEmbeddings } from "@langchain/openai";
-import { Pinecone } from "@pinecone-database/pinecone";
-import { PineconeStore } from "@langchain/pinecone";
-
+import { OpenAIEmbeddings } from "langchain/embeddings/openai";
+import { PineconeClient } from "@pinecone-database/pinecone";
+import { PineconeStore } from "langchain/vectorstores/pinecone";
 
 export type CompanionKey = {
     companionName: string;
@@ -13,40 +12,49 @@ export type CompanionKey = {
 export class MemoryManager {
     private static instance: MemoryManager;
     private history: Redis;
-    private vectorDBClient: Pinecone;
+    private vectorDBClient: PineconeClient;
 
     public constructor() {
         this.history = Redis.fromEnv();
-        this.vectorDBClient = new Pinecone({
-            apiKey:process.env.PINECONE_API_KEY!,
-        });
+        this.vectorDBClient = new PineconeClient();
+    }
+
+    public async init() {
+        if (this.vectorDBClient instanceof PineconeClient) {
+            await this.vectorDBClient.init({
+                apiKey: process.env.PINECONE_API_KEY!,
+                environment: process.env.PINECONE_ENVIRONMENT!,
+            });
+        }
     }
 
     public async vectorSearch(
-        recentChatHistory:string,
-        companionFileName:string
-    ){
-        const pineconeClient=<Pinecone>this.vectorDBClient;
-        const pineconeIndex=pineconeClient.Index(
-            process.env.PINECONE_INDEX! || "",
+        recentChatHistory: string,
+        companionFileName: string
+    ) {
+        const pineconeClient = <PineconeClient>this.vectorDBClient;
+
+        const pineconeIndex = pineconeClient.Index(
+            process.env.PINECONE_INDEX! || ""
         );
 
-        const vectorStore=await PineconeStore.fromExistingIndex(
-            new OpenAIEmbeddings({openAIApiKey:process.env.OPENAI_API_KEY}),
-            {pineconeIndex}
+        const vectorStore = await PineconeStore.fromExistingIndex(
+            new OpenAIEmbeddings({ openAIApiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY }),
+            { pineconeIndex }
         );
 
-        const similarDocs=await vectorStore
-            .similaritySearch(recentChatHistory,3,{fileName:companionFileName})
-            .catch((err)=>{
-                console.log("Warning:Failed to get vector search results",err);
+        const similarDocs = await vectorStore
+            .similaritySearch(recentChatHistory, 3, { fileName: companionFileName })
+            .catch((err) => {
+                console.log("WARNING: failed to get vector search results.", err);
             });
-            return similarDocs;
+        return similarDocs;
     }
 
-    public  static async getInstance():Promise<MemoryManager>{
-        if(!MemoryManager.instance){
-            MemoryManager.instance=new MemoryManager();
+    public static async getInstance(): Promise<MemoryManager> {
+        if (!MemoryManager.instance) {
+            MemoryManager.instance = new MemoryManager();
+            await MemoryManager.instance.init();
         }
         return MemoryManager.instance;
     }
@@ -66,17 +74,19 @@ export class MemoryManager {
             score: Date.now(),
             member: text,
         });
+
         return result;
     }
+
     public async readLatestHistory(companionKey: CompanionKey): Promise<string> {
         if (!companionKey || typeof companionKey.userId == "undefined") {
-            console.error("Companion Key Set Incorrectly!");
+            console.log("Companion key set incorrectly");
             return "";
         }
 
         const key = this.generateRedisCompanionKey(companionKey);
         let result = await this.history.zrange(key, 0, Date.now(), {
-            byScore: true
+            byScore: true,
         });
 
         result = result.slice(-30).reverse();
@@ -91,7 +101,7 @@ export class MemoryManager {
     ) {
         const key = this.generateRedisCompanionKey(companionKey);
         if (await this.history.exists(key)) {
-            console.log("User Already Has Chat History.");
+            console.log("User already has chat history");
             return;
         }
 
@@ -102,5 +112,4 @@ export class MemoryManager {
             counter += 1;
         }
     }
-
 }
